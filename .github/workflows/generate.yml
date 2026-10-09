@@ -1,0 +1,46 @@
+# Regenerates each SDK and opens a PR in its repo.
+# Triggered by couchdb-openapi releases, by changes here, or manually.
+name: generate
+on:
+  repository_dispatch:
+    types: [spec-released]
+  workflow_dispatch:
+    inputs:
+      spec_ref: { description: "couchdb-openapi ref", default: main }
+  push:
+    branches: [main]
+    paths: ["config/**", "templates/**", "openapitools.json", "scripts/**"]
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lang: [python]
+    env:
+      SPEC_REF: ${{ github.event.client_payload.spec_ref || inputs.spec_ref || 'main' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: couchdb-sdk-generator }
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/couchdb-openapi
+          ref: ${{ env.SPEC_REF }}
+          path: couchdb-openapi
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/couchdb-${{ matrix.lang }}
+          token: ${{ secrets.SDK_BOT_TOKEN }}
+          path: couchdb-${{ matrix.lang }}
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: bash couchdb-sdk-generator/scripts/generate.sh ${{ matrix.lang }}
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          path: couchdb-${{ matrix.lang }}
+          token: ${{ secrets.SDK_BOT_TOKEN }}
+          branch: regen/spec-${{ env.SPEC_REF }}
+          title: "Regenerate from couchdb-openapi@${{ env.SPEC_REF }}"
+          commit-message: "chore: regenerate from couchdb-openapi@${{ env.SPEC_REF }}"
+          body: Automated regeneration by couchdb-sdk-generator.

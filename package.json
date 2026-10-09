@@ -1,0 +1,10 @@
+{
+  "name": "couchdb-sdk-generator",
+  "private": true,
+  "scripts": {
+    "generate:python": "bash scripts/generate.sh python"
+  },
+  "devDependencies": {
+    "@openapitools/openapi-generator-cli": "2.15.3"
+  }
+}

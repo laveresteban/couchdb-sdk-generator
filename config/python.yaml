@@ -1,0 +1,14 @@
+generatorName: python
+templateDir: templates/python
+additionalProperties:
+  packageName: couchdb_client
+  projectName: couchdb-client
+  packageVersion: 0.1.0
+  packageUrl: https://github.com/OWNER/couchdb-python
+  library: urllib3
+  generateSourceCodeOnly: false
+globalProperties:
+  apiTests: false
+  modelTests: false
+  apiDocs: true
+  modelDocs: true
