@@ -24,15 +24,25 @@ better than a personal access token.
    # then use ${{ steps.app-token.outputs.token }}
    ```
 
-**Quicker alternative:** create a fine-grained PAT at
-<https://github.com/settings/personal-access-tokens/new> with the same
-permissions on the three repos, and store it as `SDK_BOT_TOKEN`:
+**Quicker alternative:** a fine-grained personal access token.
+
+1. Open <https://github.com/settings/personal-access-tokens/new>, with
+   **Resource owner** set to `laveresteban`.
+2. **Repository access → Only select repositories**: pick `couchdb-openapi`,
+   `couchdb-sdk-generator` and `couchdb-python`. With "Public repositories",
+   GitHub only offers read-only permissions.
+3. **Repository permissions**:
+   - Contents: **Read and write** (send the dispatch, push the regen branch)
+   - Pull requests: **Read and write** (open the regen PR)
+   - Metadata: Read-only (added automatically); everything else: No access
+4. Store it in the two repos whose workflows use it:
 
 ```sh
-for r in couchdb-openapi couchdb-sdk-generator couchdb-python; do
-  gh secret set SDK_BOT_TOKEN --repo laveresteban/$r
-done
+gh secret set SDK_BOT_TOKEN --repo laveresteban/couchdb-openapi
+gh secret set SDK_BOT_TOKEN --repo laveresteban/couchdb-sdk-generator
 ```
+
+Fine-grained tokens expire (at most a year). Set a reminder, or use the GitHub App above.
 
 What uses it:
 | Repo | Workflow | Why |
