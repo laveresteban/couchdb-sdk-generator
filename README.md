@@ -64,6 +64,10 @@ Found while building the Python SDK. Keep `couchdb-openapi` clear of these:
   `null`, and CouchDB treats `end_key: null` as a real bound, so you get 0 rows.
   The Python wrapper builds request models with constructors to avoid this;
   other languages should check for the same problem.
+- **Open documents (`additionalProperties: true` on `Document`)** with the
+  Kotlin generator + kotlinx-serialization: the model becomes a `HashMap`
+  subclass and user fields are lost. `couchdb-android` uses a hand-written
+  client for document and replication calls for this reason.
 
 ## Secrets
 
