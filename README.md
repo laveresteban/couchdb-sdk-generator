@@ -68,3 +68,7 @@ Found while building the Python SDK. Keep `couchdb-openapi` clear of these:
 ## Secrets
 
 See [SETUP.md](SETUP.md).
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

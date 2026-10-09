@@ -39,7 +39,7 @@ What uses it:
 |------|----------|-----|
 | couchdb-openapi | release.yml | sends `spec-released` to the generator |
 | couchdb-sdk-generator | generate.yml | reads the spec, opens PRs in SDK repos (skipped while unset) |
-| couchdb-python | ci.yml (conformance) | reads the specs from the private generator repo |
+
 
 ## 2. PyPI trusted publishing (couchdb-python)
 
