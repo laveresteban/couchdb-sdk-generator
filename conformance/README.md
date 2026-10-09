@@ -24,6 +24,7 @@ couchdb-<lang>/conformance/step_impl/   ← each SDK repo: HOW, in that language
 | security.spec | `security` | members → anonymous 401 |
 | partitions.spec | `partitions` | partitioned all_docs and find |
 | replication.spec | `replication` | one-off replication |
+| sync.spec | `sync` | `_revs_diff`, `_bulk_get`, `_local` docs, `new_edits:false`, conflicts, `style=all_docs`, filtered changes |
 
 ## Writing new scenarios (TDD)
 

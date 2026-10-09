@@ -49,8 +49,8 @@ will hit kotlinx-serialization too, so map them to `JsonElement`.
 
 ## Spec gaps to close first
 
-The replicator can't be built on the current spec. Add these to
-`couchdb-openapi` (each with a conformance scenario):
+Added in spec v0.3.0 (scenarios in `conformance/specs/sync.spec`), except
+continuous `_changes` and `open_revs`, which are still open:
 
 | Need | Endpoint / param | Why |
 |------|------------------|-----|
