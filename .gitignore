@@ -1,1 +1,5 @@
 node_modules/
+# local secrets, never commit
+.github_pat.txt
+*.pat
+.env
