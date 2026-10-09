@@ -1,6 +1,6 @@
 # Android offline sync SDK: design
 
-Status: draft. Builds on `couchdb-openapi` (v0.2.0) and this generator.
+Status: core implemented in [couchdb-android](https://github.com/laveresteban/couchdb-android) (see its README for what's left). Builds on `couchdb-openapi` (v0.2.0) and this generator.
 
 ## Goal
 
