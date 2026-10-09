@@ -1,0 +1,40 @@
+# Local dev stack for the CouchDB SDKs. Run from this repo:
+#
+#   docker compose up -d couchdb                     # start CouchDB on localhost:5984 (admin/password)
+#   docker compose stop couchdb                      # stop it; data persists in the named volume
+#   docker compose down                              # remove containers (keeps the volume)
+#   docker compose run --rm gauge --tags changes     # run the python conformance suite
+#   docker compose run --rm gauge                    # run all conformance specs
+#
+# First start only: create the single-node system databases (they persist):
+#   curl -X POST http://admin:password@localhost:5984/_cluster_setup \
+#        -H 'Content-Type: application/json' -d '{"action":"enable_single_node","bind_address":"0.0.0.0","username":"admin","password":"password"}'
+services:
+  couchdb:
+    image: couchdb:3.4
+    container_name: couchdb-sdks
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: password
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb-data:/opt/couchdb/data
+
+  gauge:
+    build:
+      context: .
+      dockerfile: gauge-python.Dockerfile
+    image: couchdb-gauge-python:latest
+    profiles: ["conformance"]
+    depends_on:
+      - couchdb
+    environment:
+      COUCHDB_URL: "http://couchdb:5984"
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: password
+    volumes:
+      - ../couchdb-python:/sdk:ro
+
+volumes:
+  couchdb-data:
