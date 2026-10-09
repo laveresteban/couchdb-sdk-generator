@@ -1,4 +1,5 @@
-# Regenerates each SDK and opens a PR in its repo.
+# Regenerates each SDK and opens a PR in its repo. The SDK repo's own CI
+# (pytest + Gauge conformance) then gates the merge.
 # Triggered by couchdb-openapi releases, by changes here, or manually.
 name: generate
 on:
@@ -10,8 +11,22 @@ on:
   push:
     branches: [main]
     paths: ["config/**", "templates/**", "openapitools.json", "scripts/**"]
+
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env: { TOKEN: "${{ secrets.SDK_BOT_TOKEN }}" }
+        run: |
+          if [ -n "$TOKEN" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"
+          else echo "::warning::SDK_BOT_TOKEN is not set; skipping SDK regeneration (see SETUP.md)"; fi
+
   generate:
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -26,6 +41,7 @@ jobs:
           repository: ${{ github.repository_owner }}/couchdb-openapi
           ref: ${{ env.SPEC_REF }}
           path: couchdb-openapi
+          token: ${{ secrets.SDK_BOT_TOKEN }}
       - uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/couchdb-${{ matrix.lang }}
@@ -35,6 +51,7 @@ jobs:
         with: { distribution: temurin, java-version: 17 }
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - run: cd couchdb-sdk-generator && npm ci
       - run: bash couchdb-sdk-generator/scripts/generate.sh ${{ matrix.lang }}
       - uses: peter-evans/create-pull-request@v7
         with:
@@ -43,4 +60,4 @@ jobs:
           branch: regen/spec-${{ env.SPEC_REF }}
           title: "Regenerate from couchdb-openapi@${{ env.SPEC_REF }}"
           commit-message: "chore: regenerate from couchdb-openapi@${{ env.SPEC_REF }}"
-          body: Automated regeneration by couchdb-sdk-generator.
+          body: Automated regeneration by couchdb-sdk-generator. CI runs pytest and the Gauge conformance suite.

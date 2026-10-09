@@ -1,19 +1,26 @@
 # couchdb-sdk-generator
 
-Turns `couchdb-openapi` into SDKs using
-[OpenAPI Generator](https://openapi-generator.tech) (pinned in `openapitools.json`).
+Turns [couchdb-openapi](https://github.com/laveresteban/couchdb-openapi) into SDKs
+with [OpenAPI Generator](https://openapi-generator.tech) (pinned in
+`openapitools.json`). It also holds the **shared Gauge conformance suite** that
+every SDK must pass.
+
+```
+couchdb-openapi ──tag vX.Y.Z──▶ couchdb-sdk-generator ──PR──▶ couchdb-python (CI: pytest + Gauge)
+```
 
 | Path | Purpose |
 |------|---------|
 | `config/<lang>.yaml` | Generator options per language |
 | `templates/<lang>/` | Mustache template overrides (optional) |
+| `conformance/specs/` | Cross-language Gauge scenarios ([README](conformance/README.md)) |
 | `sdk-matrix.yaml` | Spec ref + language → target repo map |
 | `scripts/generate.sh` | Local/CI entry point |
 | `.github/workflows/generate.yml` | Regenerate and open PRs in SDK repos |
 
 ## Local use
 
-Clone the three repos side by side:
+Clone the repos side by side:
 
 ```
 couchdb-openapi/  couchdb-sdk-generator/  couchdb-python/
@@ -22,18 +29,42 @@ couchdb-openapi/  couchdb-sdk-generator/  couchdb-python/
 Then (requires Java 11+ and Node 18+):
 
 ```sh
-npm install
+npm ci
 npm run generate:python
 ```
 
+**Versioning:** `generate.sh` reads `info.version` from the spec and passes
+it as the package version, so SDK releases track spec releases. It also
+writes `.generated-from` (spec version, spec commit, generator commit,
+OpenAPI Generator version) into the SDK repo.
+
 ## Adding a language
 
-1. Add `config/<lang>.yaml` (see `npx openapi-generator-cli config-help -g <generator>`).
-2. Create the `couchdb-<lang>` repo with an `.openapi-generator-ignore` that
-   protects hand-written files (tests, CI, CHANGELOG).
-3. Add the language to `sdk-matrix.yaml` and the workflow matrix.
+1. Add `config/<lang>.yaml` (`npx openapi-generator-cli config-help -g <generator>`).
+2. Create `couchdb-<lang>` with an `.openapi-generator-ignore` that protects
+   hand-written files (tests, CI, the idiomatic layer, `conformance/`).
+3. Implement the Gauge steps for that language (see `conformance/README.md`).
+4. Add the language to `sdk-matrix.yaml` and the workflow matrix.
+
+### Choosing a generator per language
+
+OpenAPI Generator is the default because one tool covers every language.
+Swap it per language when a dedicated generator is clearly better, e.g.
+`openapi-python-client` (attrs + httpx, native async) or `oapi-codegen` for Go.
+The SDK's hand-written layer and the conformance suite insulate users from
+that swap.
+
+### Spec patterns to avoid (they generate broken code)
+
+Found while building the Python SDK. Keep `couchdb-openapi` clear of these:
+
+- **`enum` inside `additionalProperties`** (e.g. a `{field: "asc"|"desc"}` map):
+  the Python generator validates the whole dict against the enum.
+- **Untyped `{}` properties** (e.g. view `start_key`): `from_dict` sends them as
+  `null`, and CouchDB treats `end_key: null` as a real bound, so you get 0 rows.
+  The Python wrapper builds request models with constructors to avoid this;
+  other languages should check for the same problem.
 
 ## Secrets
 
-- `SDK_BOT_TOKEN`: `contents:write` + `pull_requests:write` on each SDK repo,
-  `contents:read` on `couchdb-openapi`.
+See [SETUP.md](SETUP.md).
