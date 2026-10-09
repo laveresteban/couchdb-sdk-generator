@@ -7,3 +7,7 @@ languages:
     generator: python
     config: config/python.yaml
     repo: couchdb-python
+  typescript:
+    generator: typescript
+    config: config/typescript.yaml
+    repo: couchdb-node

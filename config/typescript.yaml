@@ -1,0 +1,10 @@
+generatorName: typescript-fetch
+templateDir: templates/typescript
+additionalProperties:
+  npmName: couchdb-node
+  supportsES6: true
+  generateSourceCodeOnly: true
+  withoutRuntimeChecks: false
+globalProperties:
+  apiDocs: true
+  modelDocs: true
