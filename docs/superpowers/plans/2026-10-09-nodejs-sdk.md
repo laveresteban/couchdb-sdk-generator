@@ -17,6 +17,7 @@
 - npm package + repo name: `couchdb-node`.
 - Published `version` must equal the spec's `info.version` (currently `0.3.0`), stamped from `couchdb_client/.generated-from`; never hand-edited.
 - Generated client lives in `couchdb_client/` and is committed; `src/`, `tests/`, `conformance/`, `scripts/` are hand-written and must never be overwritten by the generator.
+- **Generated layout (actual, from Task 1):** sources are under `couchdb_client/src/` — `couchdb_client/src/index.ts` re-exports `Configuration`, `ResponseError`, and the 11 API classes. The hand-written wrapper imports generated symbols from `../couchdb_client/src`. The generator also emits `couchdb_client/{package.json,tsconfig.json,tsconfig.esm.json,README.md,.npmignore,.gitignore,.openapi-generator-ignore}`; leave them (harmless in a subdir, unpublished).
 - Wrapper public API mirrors `couchdb_sdk` semantics; method names are idiomatic camelCase.
 - CouchDB target: `COUCHDB_URL` (default `http://localhost:5984`), `COUCHDB_USER`/`COUCHDB_PASSWORD` (default `admin`/`password`).
 - `generate.sh` and the shared `conformance/specs/*.spec` are NOT modified by this plan.
@@ -110,7 +111,7 @@ test("stamps package version from .generated-from", () => {
 
 - [ ] **Step 4: Write `scripts/sync-version.mjs`** exporting `readVersion(text: string): string` (parse `spec_version=`) and a CLI: default stamps `package.json.version` from `couchdb_client/.generated-from`; with `--check`, exits 1 and prints a diff message if they differ.
 
-- [ ] **Step 5: Write `package.json`** — name `couchdb-node`, `version` `0.3.0`, `main` `dist/src/index.js`, `types` `dist/src/index.d.ts`, `files` `["dist"]`, `engines.node` `>=18`, no `dependencies`; `devDependencies`: `typescript`, `vitest`, `@getgauge/cli`; scripts: `build` (`tsc`), `test` (`vitest run`), `conformance` (`bash scripts/conformance.sh`), `prepublishOnly` (`node scripts/sync-version.mjs --check && npm run build`). Write `tsconfig.json` (`module commonjs`, `target es2020`, `declaration true`, `outDir dist`, `strict true`, include `src` + `couchdb_client`), `vitest.config.ts`, and `.gitignore` (`dist/ node_modules/ conformance/specs conformance/reports conformance/logs`).
+- [ ] **Step 5: Write `package.json`** — name `couchdb-node`, `version` `0.3.0`, `main` `dist/src/index.js`, `types` `dist/src/index.d.ts`, `files` `["dist"]`, `engines.node` `>=18`, no `dependencies`; `devDependencies`: `typescript`, `vitest`, `@getgauge/cli`; scripts: `build` (`tsc`), `test` (`vitest run`), `conformance` (`bash scripts/conformance.sh`), `prepublishOnly` (`node scripts/sync-version.mjs --check && npm run build`). Write `tsconfig.json` (`module commonjs`, `target es2020`, `declaration true`, `outDir dist`, `rootDir "."`, `strict true`, `skipLibCheck true`, include `src` + `couchdb_client/src` — NOT `couchdb_client` root, to skip the generator's own tsconfig/package.json), `vitest.config.ts`, and `.gitignore` (`dist/ node_modules/ conformance/specs conformance/reports conformance/logs`). Resulting build layout: `dist/src/index.js` + `dist/couchdb_client/src/…`, so `main`=`dist/src/index.js`.
 
 - [ ] **Step 6: Run tests + build** — `npm install`, `npx vitest run tests/sync-version.test.ts` (PASS), `node scripts/sync-version.mjs` then confirm `package.json` version is `0.3.0`, `npm run build` (emits `dist/`).
 
