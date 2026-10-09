@@ -38,7 +38,11 @@ couchdb-node/
     manifest.json           # { "Language": "js" }
     env/default/            # default.properties, js.properties
     step_impl/steps.ts      # all 11 specs
-  scripts/conformance.sh     # copies shared specs, runs gauge
+    Dockerfile              # node:20-bookworm + gauge CLI + js plugin
+    docker-compose.yml      # couchdb + conformance runner
+  scripts/
+    conformance.sh          # copies shared specs, runs gauge
+    sync-version.mjs        # stamp/verify package.json from .generated-from
   dist/                      # tsc output (gitignored)
   package.json  tsconfig.json  vitest.config.ts
   .gitignore  README.md  LICENSE  NOTICE  CHANGELOG.md
@@ -79,12 +83,20 @@ committed so the repo is usable without regenerating (mirrors Python).
   `packageVersion`, which `typescript-fetch` ignores; with
   `generateSourceCodeOnly` the generated layer has no `package.json` anyway.
 
-### Versioning
+### Versioning (automated)
 
-Lockstep with the spec's `info.version` is enforced at the hand-written
-`package.json`: its `version` must equal `info.version`. The release step sets
-it (same discipline as Python). `generate.sh` still records provenance in
-`couchdb_client/.generated-from`.
+`generate.sh` already records the spec version in
+`couchdb_client/.generated-from` (`spec_version=…`). Lockstep is then fully
+derived — no human step:
+
+- `couchdb-node/scripts/sync-version.mjs` reads `spec_version` from
+  `couchdb_client/.generated-from` and writes it into `package.json.version`.
+- The generator's `generate:node` script chains it, so every regeneration
+  re-stamps:
+  `bash scripts/generate.sh typescript … ../couchdb-node/couchdb_client && node ../couchdb-node/scripts/sync-version.mjs`.
+- `package.json` `prepublishOnly` (and a CI check) runs `sync-version.mjs --check`,
+  which **fails on drift** between `package.json.version` and
+  `.generated-from`'s `spec_version`. `generate.sh` stays untouched.
 
 ## Wrapper modules (1:1 with `couchdb_sdk/`)
 
@@ -166,8 +178,21 @@ Re-exports `CouchDB`, `Database`, `Partition`, `ChangesFeed`, `FindResult`,
   `CONFORMANCE_SPECS` (default `../couchdb-sdk-generator/conformance/specs`),
   copies into gitignored `conformance/specs`, runs `gauge run specs`.
 - Shared spec files are unchanged; no new scenarios are added in this pass, so
-  no copy back to the generator repo is required. If Gauge cannot run locally,
-  conformance is reported as unverified (as with the Python changes-feed work).
+  no copy back to the generator repo is required.
+
+### Local run via Docker (verified)
+
+Gauge runs locally in a container, so conformance is **not** shipped unverified.
+`@getgauge/cli@1.6.38` + `gauge install js` (js plugin 5.0.8) install cleanly on
+`node:20-bookworm` — confirmed by a build probe on 2026-10-09.
+
+- `couchdb-node/conformance/Dockerfile`: `node:20-bookworm`, installs the Gauge
+  CLI + `js` plugin, copies the SDK, builds it, runs `scripts/conformance.sh`.
+- `couchdb-node/conformance/docker-compose.yml`: two services —
+  `couchdb` (`couchdb:3`, admin/password) and `conformance` (the image above,
+  `COUCHDB_URL=http://couchdb:5984`, `depends_on` a healthcheck) — so
+  `docker compose run --rm conformance` gives a one-command local pass. The
+  shared specs are bind-mounted from `../../couchdb-sdk-generator/conformance/specs`.
 
 ## Build & publish
 
