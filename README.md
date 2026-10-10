@@ -21,6 +21,8 @@ but runs the same conformance specs.
 | `sdk-matrix.json` | Default spec ref, and per language: config, SDK repo, output dir, post step |
 | `scripts/generate.sh` | Local/CI entry point (reads `sdk-matrix.json`) |
 | `.github/workflows/generate.yml` | Regenerate and open PRs in SDK repos (matrix from `sdk-matrix.json`) |
+| `.github/workflows/sdk-ci.yml` | Reusable CI the generated SDKs call: tests, conformance, generated-code drift check |
+| `docs/sdk-design.md` | How the hand-written SDK layers behave (errors, retries, changes feed, sessions, parity) |
 | `.github/workflows/ci.yml` | Every language generates from couchdb-openapi `main`; specs parse; Docker runners work |
 | `scripts/check-specs.sh` | Parses the conformance specs and checks their conventions |
 | `docker-compose.yml` | CouchDB plus a conformance runner per SDK |
@@ -63,6 +65,8 @@ OpenAPI Generator version) into the SDK repo.
 3. Implement the Gauge steps for that language (see `conformance/README.md`).
 4. Add the language to `sdk-matrix.json` (`config`, `repo`, `output`, and an
    optional `post` command run in the SDK repo). Both workflows pick it up.
+5. Give the SDK repo a `ci.yml` that calls `sdk-ci.yml` (see its header),
+   and follow `docs/sdk-design.md` for the hand-written layer.
 
 ### Choosing a generator per language
 

@@ -69,3 +69,30 @@ jobs:
       - name: Android runner
         working-directory: couchdb-sdk-generator
         run: docker compose run --rm -e GAUGE_TAGS=databases gauge-android
+
+  # Runs the shared SDK CI (sdk-ci.yml, from this commit) against each SDK's
+  # main branch, so a change to the shared CI is tested before the SDKs pick
+  # it up from this repo's main.
+  sdk-python:
+    uses: ./.github/workflows/sdk-ci.yml
+    with:
+      sdk-repository: ${{ github.repository_owner }}/couchdb-python
+      sdk-ref: main
+      language: python
+      matrix-key: python
+      versions: '["3.9", "3.13"]'
+      conformance-version: "3.12"
+      install: pip install -e . -r test-requirements.txt
+      test: pytest -q tests
+
+  sdk-node:
+    uses: ./.github/workflows/sdk-ci.yml
+    with:
+      sdk-repository: ${{ github.repository_owner }}/couchdb-node
+      sdk-ref: main
+      language: node
+      matrix-key: typescript
+      versions: '["18", "22"]'
+      conformance-version: "20"
+      install: npm ci && npm run build
+      test: node scripts/sync-version.mjs --check && npm test
