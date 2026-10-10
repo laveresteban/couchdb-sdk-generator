@@ -40,8 +40,9 @@ jobs:
       - run: bash scripts/check-specs.sh
 
   # Builds every conformance image and runs one small spec through each, so
-  # `docker compose run gauge-*` keeps working. Smoke tags only: the full
-  # suites run in each SDK repo's own CI.
+  # `docker compose run gauge-*` keeps working. The smoke tag is one every SDK's
+  # main branch implements (databases); the full suites run in each SDK's CI,
+  # and new scenarios here land there first.
   docker:
     runs-on: ubuntu-latest
     steps:
@@ -61,10 +62,10 @@ jobs:
         run: docker compose up -d --wait couchdb
       - name: Python runner
         working-directory: couchdb-sdk-generator
-        run: docker compose run --rm gauge-python --tags server
+        run: docker compose run --rm gauge-python --tags databases
       - name: Node runner
         working-directory: couchdb-sdk-generator
-        run: docker compose run --rm gauge-node bash conformance/run-in-docker.sh --tags server
+        run: docker compose run --rm gauge-node bash conformance/run-in-docker.sh --tags databases
       - name: Android runner
         working-directory: couchdb-sdk-generator
         run: docker compose run --rm -e GAUGE_TAGS=databases gauge-android
