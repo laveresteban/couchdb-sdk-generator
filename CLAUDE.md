@@ -52,9 +52,8 @@ generated files pruned by `generate.sh`; `scripts/check-specs.sh` (parse +
 conventions) and a Docker job in CI that builds every runner image and runs
 a smoke tag through each.
 
-- The Docker images haven't been built in this cloud environment (Docker
-  Hub and GitHub downloads are blocked inside containers here); the new CI
-  `docker` job is the first real build.
+- None known. The CI `docker` job builds all three runner images and runs
+  the `databases` specs through each (green on PR #2).
 
 ## Features to add
 
