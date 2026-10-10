@@ -30,3 +30,41 @@ jobs:
             mkdir -p "../scratch/$repo"
             bash scripts/generate.sh "$lang" ../couchdb-openapi/openapi.yaml "../scratch/$repo"
           done
+
+  specs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: bash scripts/check-specs.sh
+
+  # Builds every conformance image and runs one small spec through each, so
+  # `docker compose run gauge-*` keeps working. Smoke tags only: the full
+  # suites run in each SDK repo's own CI.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: couchdb-sdk-generator }
+      - uses: actions/checkout@v4
+        with: { repository: "${{ github.repository_owner }}/couchdb-python", path: couchdb-python }
+      - uses: actions/checkout@v4
+        with: { repository: "${{ github.repository_owner }}/couchdb-node", path: couchdb-node }
+      - uses: actions/checkout@v4
+        with: { repository: "${{ github.repository_owner }}/couchdb-android", path: couchdb-android }
+      - name: Build images
+        working-directory: couchdb-sdk-generator
+        run: docker compose --profile conformance build
+      - name: Start CouchDB
+        working-directory: couchdb-sdk-generator
+        run: docker compose up -d --wait couchdb
+      - name: Python runner
+        working-directory: couchdb-sdk-generator
+        run: docker compose run --rm gauge-python --tags server
+      - name: Node runner
+        working-directory: couchdb-sdk-generator
+        run: docker compose run --rm gauge-node bash conformance/run-in-docker.sh --tags server
+      - name: Android runner
+        working-directory: couchdb-sdk-generator
+        run: docker compose run --rm -e GAUGE_TAGS=databases gauge-android

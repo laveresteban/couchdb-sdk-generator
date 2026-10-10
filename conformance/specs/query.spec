@@ -17,3 +17,9 @@ Tags: query
 ## Paginate with limit and bookmark
 * Finding documents with age greater than "0" with limit "2" returns "2" documents and a bookmark
 * Continuing from the bookmark returns "2" more documents
+
+## List design and local documents
+* Save design document "stats" with view "by_age" emitting age and reducing with "_count"
+* Save local document "cp" with field "v" = "1"
+* Design documents list "1" rows
+* Local documents list "1" rows

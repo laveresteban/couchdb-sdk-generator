@@ -16,12 +16,13 @@ but runs the same conformance specs.
 | Path | Purpose |
 |------|---------|
 | `config/<lang>.yaml` | Generator options per language |
-| `templates/<lang>/` | Mustache template overrides (optional) |
+| `templates/<lang>/` | Mustache template overrides (see each README) |
 | `conformance/specs/` | Cross-language Gauge scenarios ([README](conformance/README.md)) |
 | `sdk-matrix.json` | Default spec ref, and per language: config, SDK repo, output dir, post step |
 | `scripts/generate.sh` | Local/CI entry point (reads `sdk-matrix.json`) |
 | `.github/workflows/generate.yml` | Regenerate and open PRs in SDK repos (matrix from `sdk-matrix.json`) |
-| `.github/workflows/ci.yml` | Checks every language still generates from couchdb-openapi `main` |
+| `.github/workflows/ci.yml` | Every language generates from couchdb-openapi `main`; specs parse; Docker runners work |
+| `scripts/check-specs.sh` | Parses the conformance specs and checks their conventions |
 | `docker-compose.yml` | CouchDB plus a conformance runner per SDK |
 
 ## Local use
@@ -48,6 +49,8 @@ docker compose run --rm gauge-python    # or gauge-node, gauge-android
 
 **Versioning:** `generate.sh` reads `info.version` from the spec and passes
 it as the package version, so SDK releases track spec releases. It also
+deletes files the generator wrote last time but no longer writes (models for
+removed schemas), since OpenAPI Generator never deletes anything. It also
 writes `.generated-from` (spec version, spec commit, generator commit,
 OpenAPI Generator version) into the SDK repo.
 
@@ -75,10 +78,14 @@ Found while building the Python SDK. Keep `couchdb-openapi` clear of these:
 
 - **`enum` inside `additionalProperties`** (e.g. a `{field: "asc"|"desc"}` map):
   the Python generator validates the whole dict against the enum.
-- **Untyped `{}` properties** (e.g. view `start_key`): `from_dict` sends them as
-  `null`, and CouchDB treats `end_key: null` as a real bound, so you get 0 rows.
-  The Python wrapper builds request models with constructors to avoid this;
-  other languages should check for the same problem.
+- **Untyped `{}` properties** (e.g. view `start_key`): stock Python `from_dict`
+  marks absent fields as set, so they go out as `null`, and CouchDB treats
+  `end_key: null` as a real bound (0 rows). Fixed for Python by
+  `templates/python/model_generic.mustache`; other languages should check
+  for the same problem.
+- **`oneOf` with a primitive** (e.g. `oneOf: [string, object]`):
+  typescript-fetch imports a `./string` model that doesn't exist. Leave the
+  schema untyped with a description instead (see `ReplicationEndpoint`).
 - **Open documents (`additionalProperties: true` on `Document`)** with the
   Kotlin generator + kotlinx-serialization: the model becomes a `HashMap`
   subclass and user fields are lost. `couchdb-android` uses a hand-written

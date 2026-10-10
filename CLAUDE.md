@@ -7,14 +7,15 @@ Sibling repos (clone side by side):
 
 | Repo | Role | Spec version |
 |------|------|--------------|
-| couchdb-openapi | source of truth (`openapi.yaml`) | 0.6.0 |
+| couchdb-openapi | source of truth (`openapi.yaml`) | 0.7.0 |
 | couchdb-sdk-generator | this repo: configs, templates, conformance specs | — |
 | couchdb-python | generated `couchdb_client` + hand-written `couchdb_sdk` | 0.6.0 |
 | couchdb-node | generated `couchdb_client/` + hand-written `src/` | 0.6.0 |
 | couchdb-android | hand-written offline sync (no generated code yet) | n/a |
 
 Each repo has its own CLAUDE.md with repo-specific fixes and features.
-Python and Node are at feature parity and pass all 33 conformance scenarios;
+The suite has 46 scenarios. Python passes all of them on spec 0.7.0; Node
+still needs the 13 added with 0.7.0 (maintenance, conditional, listings, ...);
 couchdb-android runs the `documents | changes | sync | databases` tags.
 
 ## Commands
@@ -45,14 +46,14 @@ config, SDK repo, output dir inside it, and a post step run in the SDK repo.
 
 ## Fixes still open
 
-- The Docker conformance images were checked with the entrypoint on the
-  host (33/33 for Python), not built end to end in this environment
-  (Docker Hub and GitHub downloads were blocked here).
-- `templates/python` and `templates/typescript` only hold a README. The
-  Python "untyped `{}` sent as null" bug could be fixed in a model template
-  instead of in every wrapper call.
-- No generator-side check that the conformance specs parse (`gauge format`
-  needs a full project); SDK CI catches it instead.
+Done: Python untyped-`{}` null bug fixed in `templates/python`; stale
+generated files pruned by `generate.sh`; `scripts/check-specs.sh` (parse +
+conventions) and a Docker job in CI that builds every runner image and runs
+a smoke tag through each.
+
+- The Docker images haven't been built in this cloud environment (Docker
+  Hub and GitHub downloads are blocked inside containers here); the new CI
+  `docker` job is the first real build.
 
 ## Features to add
 

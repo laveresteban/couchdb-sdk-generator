@@ -29,9 +29,20 @@ post="$(entry post)"
 version="$(awk '/^info:/{f=1;next} f&&/^  version:/{print $2;exit}' "$spec")"
 [[ -n "$version" ]] || { echo "could not read info.version from $spec" >&2; exit 1; }
 
+# OpenAPI Generator never deletes files, so remember what it wrote last time
+# and remove anything it no longer writes (e.g. models for removed schemas).
+manifest="$out/.openapi-generator/FILES"
+previous="$(cat "$manifest" 2>/dev/null || true)"
+
 npx --yes @openapitools/openapi-generator-cli generate \
   -i "$spec" -c "$config" -o "$out" \
   --additional-properties="packageVersion=${version}"
+
+if [[ -n "$previous" ]]; then
+  comm -23 <(sort -u <<<"$previous") <(sort -u "$manifest") | while IFS= read -r stale; do
+    [[ -n "$stale" && -f "$out/$stale" ]] && rm -- "$out/$stale" && echo "removed stale $stale"
+  done
+fi
 
 # Record provenance so the SDK repo knows what built it.
 spec_sha="$(git -C "$(dirname "$spec")" rev-parse --short HEAD 2>/dev/null || echo unknown)"
