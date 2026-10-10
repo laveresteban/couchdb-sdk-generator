@@ -1,0 +1,198 @@
+# Shared CI for the generated SDKs. Each SDK repo calls it from its own
+# .github/workflows/ci.yml:
+#
+#   jobs:
+#     ci:
+#       uses: laveresteban/couchdb-sdk-generator/.github/workflows/sdk-ci.yml@main
+#       with:
+#         language: python                 # python | node
+#         matrix-key: python               # key in sdk-matrix.json
+#         versions: '["3.9", "3.12", "3.13"]'
+#         conformance-version: "3.12"
+#         install: pip install -e . -r test-requirements.txt
+#         test: pytest -v tests
+#
+# Jobs:
+#   test         unit + integration tests on each version, against CouchDB 3.4
+#   conformance  the shared Gauge specs from this repo (fails on skipped scenarios)
+#   generated    regenerates the client from the spec and generator commits in
+#                .generated-from and fails if the committed code differs, so
+#                generated code is never edited by hand
+name: sdk-ci
+on:
+  workflow_call:
+    inputs:
+      language:
+        description: "Toolchain: python or node"
+        type: string
+        required: true
+      matrix-key:
+        description: "This SDK's key in sdk-matrix.json (python, typescript)"
+        type: string
+        required: true
+      versions:
+        description: "JSON list of runtime versions for the test job"
+        type: string
+        required: true
+      conformance-version:
+        description: "Runtime version for the conformance job"
+        type: string
+        required: true
+      install:
+        description: "Command that installs the SDK and its test deps"
+        type: string
+        required: true
+      test:
+        description: "Command that runs the SDK's tests"
+        type: string
+        required: true
+      generator-ref:
+        description: "Ref of couchdb-sdk-generator whose conformance specs to run"
+        type: string
+        default: main
+      couchdb-image:
+        type: string
+        default: couchdb:3.4
+      sdk-repository:
+        description: "SDK repo to test (owner/name); defaults to the calling repo. Used by this repo's own CI."
+        type: string
+        default: ""
+      sdk-ref:
+        description: "Ref of sdk-repository to test; defaults to the triggering commit"
+        type: string
+        default: ""
+
+env:
+  COUCHDB_URL: http://localhost:5984
+  COUCHDB_USER: admin
+  COUCHDB_PASSWORD: password
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(inputs.versions) }}
+    services:
+      couchdb:
+        image: ${{ inputs.couchdb-image }}
+        env: { COUCHDB_USER: admin, COUCHDB_PASSWORD: password }
+        ports: ["5984:5984"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.sdk-repository || github.repository }}
+          ref: ${{ inputs.sdk-ref }}
+      - if: inputs.language == 'python'
+        uses: actions/setup-python@v5
+        with: { python-version: "${{ matrix.version }}" }
+      - if: inputs.language == 'node'
+        uses: actions/setup-node@v4
+        with: { node-version: "${{ matrix.version }}" }
+      - name: Wait for CouchDB, create system databases
+        run: |
+          for i in $(seq 60); do curl -sf "$COUCHDB_URL/_up" && break; sleep 1; done
+          # Single-node system databases: _scheduler/docs needs _replicator,
+          # _db_updates needs _global_changes.
+          for db in _users _replicator _global_changes; do
+            curl -sf -X PUT -u "$COUCHDB_USER:$COUCHDB_PASSWORD" "$COUCHDB_URL/$db" || true
+          done
+      - name: Install
+        env: { CMD: "${{ inputs.install }}" }
+        run: eval "$CMD"
+      - name: Test
+        env: { CMD: "${{ inputs.test }}" }
+        run: eval "$CMD"
+
+  conformance:
+    runs-on: ubuntu-latest
+    services:
+      couchdb:
+        image: ${{ inputs.couchdb-image }}
+        env: { COUCHDB_USER: admin, COUCHDB_PASSWORD: password }
+        ports: ["5984:5984"]
+    steps:
+      # Side by side: each SDK's scripts/conformance.sh looks for the specs in
+      # ../couchdb-sdk-generator.
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.sdk-repository || github.repository }}
+          ref: ${{ inputs.sdk-ref }}
+          path: sdk
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/couchdb-sdk-generator
+          ref: ${{ inputs.generator-ref }}
+          path: couchdb-sdk-generator
+          sparse-checkout: conformance
+      - if: inputs.language == 'python'
+        uses: actions/setup-python@v5
+        with: { python-version: "${{ inputs.conformance-version }}" }
+      - uses: actions/setup-node@v4  # Gauge CLI comes from npm
+        with: { node-version: "${{ inputs.language == 'node' && inputs.conformance-version || '20' }}" }
+      - name: Wait for CouchDB, create system databases
+        run: |
+          for i in $(seq 60); do curl -sf "$COUCHDB_URL/_up" && break; sleep 1; done
+          # Single-node system databases: _scheduler/docs needs _replicator,
+          # _db_updates needs _global_changes.
+          for db in _users _replicator _global_changes; do
+            curl -sf -X PUT -u "$COUCHDB_USER:$COUCHDB_PASSWORD" "$COUCHDB_URL/$db" || true
+          done
+      - name: Install
+        working-directory: sdk
+        env: { CMD: "${{ inputs.install }}" }
+        run: eval "$CMD"
+      - run: bash "sdk/scripts/conformance.sh"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: conformance-report
+          path: sdk/conformance/reports/html-report
+          if-no-files-found: ignore
+
+  generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.sdk-repository || github.repository }}
+          ref: ${{ inputs.sdk-ref }}
+          path: sdk
+      - name: Read .generated-from
+        id: from
+        working-directory: sdk
+        run: |
+          f=$(find . -maxdepth 2 -name .generated-from -not -path './node_modules/*' | head -1)
+          [ -n "$f" ] || { echo "::error::no .generated-from in this repo"; exit 1; }
+          cat "$f"
+          echo "spec=$(sed -n 's/^spec_sha=//p' "$f")" >> "$GITHUB_OUTPUT"
+          echo "generator=$(sed -n 's/^generator_sha=//p' "$f")" >> "$GITHUB_OUTPUT"
+      # .generated-from holds short SHAs, which checkout can't fetch directly.
+      - name: Check out the recorded spec and generator commits
+        env:
+          OWNER: ${{ github.repository_owner }}
+          SPEC: ${{ steps.from.outputs.spec }}
+          GEN: ${{ steps.from.outputs.generator }}
+        run: |
+          git clone -q "https://github.com/$OWNER/couchdb-openapi" couchdb-openapi
+          git clone -q "https://github.com/$OWNER/couchdb-sdk-generator" couchdb-sdk-generator
+          git -C couchdb-openapi checkout -q "$SPEC"
+          git -C couchdb-sdk-generator checkout -q "$GEN"
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd couchdb-sdk-generator && npm ci
+      - name: Regenerate
+        env: { LANG_KEY: "${{ inputs.matrix-key }}" }
+        run: bash couchdb-sdk-generator/scripts/generate.sh "$LANG_KEY" "$PWD/couchdb-openapi/openapi.yaml" "$PWD/sdk"
+      - name: Generated code matches
+        working-directory: sdk
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            git --no-pager diff --stat
+            echo "::error::Generated code differs from what .generated-from produces. Don't edit generated files; change the spec, config or a template and regenerate."
+            exit 1
+          fi

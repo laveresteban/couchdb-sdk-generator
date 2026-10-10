@@ -36,6 +36,12 @@ config, SDK repo, output dir inside it, and a post step run in the SDK repo.
 
 ## Rules
 
+- SDK CI lives here (`.github/workflows/sdk-ci.yml`) and the SDKs call it;
+  change shared CI here, not in each SDK. Changes reach the SDKs on their
+  next run (they track `@main`), so keep the inputs backward compatible.
+- Hand-written SDK behavior is specified in `docs/sdk-design.md`; update it
+  with any behavior change and mirror the change in the other SDKs.
+
 - Spec change → add a scenario in `conformance/specs` in the same change.
   Step text describes behavior, never a language API. All params are quoted strings.
 - Gauge reports scenarios with missing steps as *skipped* and still exits 0.
