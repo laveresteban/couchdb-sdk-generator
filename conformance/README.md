@@ -20,7 +20,7 @@ couchdb-<lang>/conformance/step_impl/   ← each SDK repo: HOW, in that language
 | query.spec | `query` | Mango find, indexes + sort, bookmark pagination |
 | views.spec | `views` | design docs, map/reduce, delete |
 | attachments.spec | `attachments` | upload, download, delete |
-| changes.spec | `changes` | normal feed, resume from seq, deletions |
+| changes.spec | `changes` | normal feed, resume from seq, deletions, doc id filter, checkpointed longpoll and continuous readers |
 | security.spec | `security` | members → anonymous 401 |
 | partitions.spec | `partitions` | partitioned all_docs and find |
 | replication.spec | `replication` | one-off replication |
@@ -33,6 +33,8 @@ couchdb-<lang>/conformance/step_impl/   ← each SDK repo: HOW, in that language
 2. Run the suite in an SDK repo: new steps show as *skipped* with generated
    stubs, so the suite is red.
 3. Implement the steps (and any missing SDK feature) until it is green.
+   Gauge itself reports skipped scenarios as a pass, so each SDK's
+   `scripts/conformance.sh` fails the run when anything was skipped.
 4. Merge the spec change here, then the SDK change.
 
 Conventions:
@@ -48,6 +50,7 @@ Conventions:
    (`manifest.json`, `env/default/`, `step_impl/`) for that language's runner
    (`gauge install java|js|dotnet|ruby|go`).
 2. Copy `couchdb-python/scripts/conformance.sh`. It copies these specs into
-   `conformance/specs` (gitignored) and runs `gauge run specs`.
+   `conformance/specs` (gitignored), runs `gauge run specs`, and fails if any
+   scenario was skipped.
 3. Implement steps until `gauge run` shows 0 skipped, 0 failed.
 4. Add the `conformance` CI job (see `couchdb-python/.github/workflows/ci.yml`).

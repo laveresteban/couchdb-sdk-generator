@@ -1,14 +1,16 @@
-# Local dev stack for the CouchDB SDKs. Run from this repo:
+# Local dev stack for the CouchDB SDKs. Run from this repo, with the SDK repos
+# cloned next to it (../couchdb-python, ../couchdb-node, ../couchdb-android):
 #
-#   docker compose up -d couchdb                     # start CouchDB on localhost:5984 (admin/password)
-#   docker compose stop couchdb                      # stop it; data persists in the named volume
-#   docker compose down                              # remove containers (keeps the volume)
-#   docker compose run --rm gauge --tags changes     # run the python conformance suite
-#   docker compose run --rm gauge                    # run all conformance specs
+#   docker compose up -d couchdb                         # CouchDB 3.4 on localhost:5984 (admin/password)
+#   docker compose stop couchdb                          # stop it; data persists in the named volume
+#   docker compose down                                  # remove containers (keeps the volume)
 #
-# First start only: create the single-node system databases (they persist):
-#   curl -X POST http://admin:password@localhost:5984/_cluster_setup \
-#        -H 'Content-Type: application/json' -d '{"action":"enable_single_node","bind_address":"0.0.0.0","username":"admin","password":"password"}'
+#   docker compose run --rm gauge-python                 # python conformance (all specs)
+#   docker compose run --rm gauge-python --tags changes  # one area
+#   docker compose run --rm gauge-node                   # takes no extra args
+#   docker compose run --rm -e GAUGE_TAGS=sync gauge-android
+#
+# Each runner creates the single-node system databases on first use.
 services:
   couchdb:
     image: couchdb:3.4
@@ -20,21 +22,59 @@ services:
       - "5984:5984"
     volumes:
       - couchdb-data:/opt/couchdb/data
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:5984/_up"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
 
-  gauge:
+  gauge-python:
     build:
       context: .
       dockerfile: gauge-python.Dockerfile
     image: couchdb-gauge-python:latest
     profiles: ["conformance"]
     depends_on:
-      - couchdb
-    environment:
+      couchdb: { condition: service_healthy }
+    environment: &couch
       COUCHDB_URL: "http://couchdb:5984"
       COUCHDB_USER: admin
       COUCHDB_PASSWORD: password
     volumes:
       - ../couchdb-python:/sdk:ro
+      - ./conformance/specs:/specs:ro
+
+  gauge-node:
+    build:
+      context: ../couchdb-node
+      dockerfile: conformance/Dockerfile
+    image: couchdb-gauge-node:latest
+    profiles: ["conformance"]
+    depends_on:
+      couchdb: { condition: service_healthy }
+    environment:
+      <<: *couch
+      CONFORMANCE_SPECS: /specs
+    volumes:
+      - ./conformance/specs:/specs:ro
+
+  gauge-android:
+    build:
+      context: .
+      dockerfile: gauge-java.Dockerfile
+    image: couchdb-gauge-java:latest
+    profiles: ["conformance"]
+    depends_on:
+      couchdb: { condition: service_healthy }
+    environment: *couch
+    # Gradle builds in place, so the repo is mounted read-write; the cache
+    # volume keeps downloads between runs.
+    volumes:
+      - ../couchdb-android:/sdk
+      - .:/generator:ro
+      - gradle-cache:/root/.gradle
+    entrypoint: ["bash", "-c", "for db in _users _replicator _global_changes; do curl -s -o /dev/null -X PUT \"http://$$COUCHDB_USER:$$COUCHDB_PASSWORD@couchdb:5984/$$db\"; done; exec scripts/conformance.sh /generator"]
 
 volumes:
   couchdb-data:
+  gradle-cache:

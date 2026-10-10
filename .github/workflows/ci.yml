@@ -1,0 +1,32 @@
+# Checks that every language in sdk-matrix.json still generates from the
+# current couchdb-openapi main.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: couchdb-sdk-generator }
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/couchdb-openapi
+          path: couchdb-openapi
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: cd couchdb-sdk-generator && npm ci
+      - name: Generate every language into scratch repos
+        working-directory: couchdb-sdk-generator
+        env: { SKIP_POST: "1" }  # post steps belong to the real SDK repos
+        run: |
+          for lang in $(jq -r '.languages | keys[]' sdk-matrix.json); do
+            repo=$(jq -r --arg l "$lang" '.languages[$l].repo' sdk-matrix.json)
+            mkdir -p "../scratch/$repo"
+            bash scripts/generate.sh "$lang" ../couchdb-openapi/openapi.yaml "../scratch/$repo"
+          done
