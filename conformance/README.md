@@ -13,17 +13,19 @@ couchdb-<lang>/conformance/step_impl/   ← each SDK repo: HOW, in that language
 
 | Spec | Tag | Scenarios |
 |------|-----|-----------|
-| server.spec | `server` | anonymous server info, `_up`, bulk UUIDs |
+| server.spec | `server` | anonymous server info, `_up`, bulk UUIDs, replication scheduler, `_db_updates` |
 | authentication.spec | `auth` | cookie login/logout, bad password → 401 |
 | databases.spec | `databases` | create/inspect/delete, duplicate → 412 |
 | documents.spec | `documents` | CRUD, stale rev → 409, server ids, bulk writes |
-| query.spec | `query` | Mango find, indexes + sort, bookmark pagination |
-| views.spec | `views` | design docs, map/reduce, delete |
-| attachments.spec | `attachments` | upload, download, delete |
+| conditional.spec | `conditional` | `HEAD` existence check, `If-None-Match` → 304 |
+| query.spec | `query` | Mango find, indexes + sort, bookmark pagination, `_design_docs` / `_local_docs` |
+| views.spec | `views` | design docs, map/reduce, key ranges, delete |
+| attachments.spec | `attachments` | upload, download, delete, content type kept |
 | changes.spec | `changes` | normal feed, resume from seq, deletions, doc id filter, checkpointed longpoll and continuous readers |
 | security.spec | `security` | members → anonymous 401 |
 | partitions.spec | `partitions` | partitioned all_docs and find |
-| replication.spec | `replication` | one-off replication |
+| replication.spec | `replication` | one-off replication, with endpoint objects or plain URLs |
+| maintenance.spec | `maintenance` | compact, view cleanup, purge, `_explain`, `_active_tasks`, `_dbs_info` |
 | sync.spec | `sync` | `_revs_diff`, `_bulk_get`, `_local` docs, `new_edits:false`, conflicts, `style=all_docs`, filtered changes |
 
 ## Writing new scenarios (TDD)

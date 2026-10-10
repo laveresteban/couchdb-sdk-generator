@@ -9,3 +9,9 @@ Tags: replication
 * Bulk save "10" documents with field "type" = "repl"
 * Replicate the database to a new database
 * The replica has "10" documents
+
+## Replication with plain URLs
+* Create a fresh database
+* Bulk save "3" documents with field "type" = "repl"
+* Replicate the database to a new database using plain URLs
+* The replica has "3" documents

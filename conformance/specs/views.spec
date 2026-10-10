@@ -16,3 +16,7 @@ Tags: views
 * Save design document "stats" with view "by_age" emitting age and reducing with "_count"
 * Delete design document "stats"
 * Design document "stats" does not exist
+
+## Query a key range
+* Save design document "stats" with view "by_age" emitting age and reducing with "_count"
+* Querying view "stats/by_age" from key "25" to key "45" returns "2" rows
