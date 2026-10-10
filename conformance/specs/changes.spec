@@ -20,3 +20,20 @@ Tags: changes
 * Save document "a" with field "v" = "1"
 * Delete document "a"
 * The changes feed marks document "a" as deleted
+
+## Feed filters by document ids
+* Save document "a" with field "v" = "1"
+* Save document "b" with field "v" = "1"
+* The changes feed filtered to documents "b" lists documents "b"
+
+## Reader resumes from its checkpoint
+* Save document "a" with field "v" = "1"
+* Follow the changes feed with checkpoint "reader" until document "a"
+* Save document "c" with field "v" = "1"
+* Following the changes feed with checkpoint "reader" next yields document "c"
+
+## Continuous reader resumes from its checkpoint
+* Save document "a" with field "v" = "1"
+* Follow the continuous changes feed with checkpoint "cont" until document "a"
+* Save document "c" with field "v" = "1"
+* Following the continuous changes feed with checkpoint "cont" next yields document "c"
