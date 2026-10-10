@@ -1,0 +1,20 @@
+{
+  "spec": {
+    "repo": "couchdb-openapi",
+    "ref": "main"
+  },
+  "languages": {
+    "python": {
+      "config": "config/python.yaml",
+      "repo": "couchdb-python",
+      "output": ".",
+      "post": ""
+    },
+    "typescript": {
+      "config": "config/typescript.yaml",
+      "repo": "couchdb-node",
+      "output": "couchdb_client",
+      "post": "node scripts/sync-version.mjs"
+    }
+  }
+}

@@ -1,52 +1,68 @@
 # Regenerates each SDK and opens a PR in its repo. The SDK repo's own CI
-# (pytest + Gauge conformance) then gates the merge.
+# (unit tests + Gauge conformance) then gates the merge.
 # Triggered by couchdb-openapi releases, by changes here, or manually.
+# Languages, target repos and output dirs come from sdk-matrix.json.
 name: generate
 on:
   repository_dispatch:
     types: [spec-released]
   workflow_dispatch:
     inputs:
-      spec_ref: { description: "couchdb-openapi ref", default: main }
+      spec_ref: { description: "couchdb-openapi ref (default: spec.ref in sdk-matrix.json)", required: false }
   push:
     branches: [main]
-    paths: ["config/**", "templates/**", "openapitools.json", "scripts/**"]
+    paths: ["config/**", "templates/**", "openapitools.json", "scripts/**", "sdk-matrix.json"]
 
 jobs:
   preflight:
     runs-on: ubuntu-latest
     outputs:
       ready: ${{ steps.check.outputs.ready }}
+      langs: ${{ steps.matrix.outputs.langs }}
     steps:
+      - uses: actions/checkout@v4
       - id: check
         env: { TOKEN: "${{ secrets.SDK_BOT_TOKEN }}" }
         run: |
           if [ -n "$TOKEN" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"
           else echo "::warning::SDK_BOT_TOKEN is not set; skipping SDK regeneration (see SETUP.md)"; fi
+      - id: matrix
+        run: echo "langs=$(jq -c '.languages | keys' sdk-matrix.json)" >> "$GITHUB_OUTPUT"
 
   generate:
     needs: preflight
     if: needs.preflight.outputs.ready == 'true'
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        lang: [python]
-    env:
-      SPEC_REF: ${{ github.event.client_payload.spec_ref || inputs.spec_ref || 'main' }}
+        lang: ${{ fromJSON(needs.preflight.outputs.langs) }}
     steps:
       - uses: actions/checkout@v4
         with: { path: couchdb-sdk-generator }
+      - id: target
+        working-directory: couchdb-sdk-generator
+        env:
+          LANG_KEY: ${{ matrix.lang }}
+          REF_INPUT: ${{ github.event.client_payload.spec_ref || inputs.spec_ref }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          repo=$(jq -r --arg l "$LANG_KEY" '.languages[$l].repo' sdk-matrix.json)
+          ref="${REF_INPUT:-$(jq -r '.spec.ref' sdk-matrix.json)}"
+          # Spec releases share one PR per spec ref; generator changes get their own.
+          if [ "$EVENT" = push ]; then branch="regen/generator-${GITHUB_SHA::7}"; else branch="regen/spec-$ref"; fi
+          { echo "repo=$repo"; echo "spec_ref=$ref"; echo "branch=$branch"; } >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:
           repository: ${{ github.repository_owner }}/couchdb-openapi
-          ref: ${{ env.SPEC_REF }}
+          ref: ${{ steps.target.outputs.spec_ref }}
           path: couchdb-openapi
           token: ${{ secrets.SDK_BOT_TOKEN }}
       - uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository_owner }}/couchdb-${{ matrix.lang }}
+          repository: ${{ github.repository_owner }}/${{ steps.target.outputs.repo }}
           token: ${{ secrets.SDK_BOT_TOKEN }}
-          path: couchdb-${{ matrix.lang }}
+          path: ${{ steps.target.outputs.repo }}
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: actions/setup-node@v4
@@ -55,9 +71,11 @@ jobs:
       - run: bash couchdb-sdk-generator/scripts/generate.sh ${{ matrix.lang }}
       - uses: peter-evans/create-pull-request@v7
         with:
-          path: couchdb-${{ matrix.lang }}
+          path: ${{ steps.target.outputs.repo }}
           token: ${{ secrets.SDK_BOT_TOKEN }}
-          branch: regen/spec-${{ env.SPEC_REF }}
-          title: "Regenerate from couchdb-openapi@${{ env.SPEC_REF }}"
-          commit-message: "chore: regenerate from couchdb-openapi@${{ env.SPEC_REF }}"
-          body: Automated regeneration by couchdb-sdk-generator. CI runs pytest and the Gauge conformance suite.
+          branch: ${{ steps.target.outputs.branch }}
+          title: "Regenerate from couchdb-openapi@${{ steps.target.outputs.spec_ref }}"
+          commit-message: "chore: regenerate from couchdb-openapi@${{ steps.target.outputs.spec_ref }}"
+          body: |
+            Automated regeneration by couchdb-sdk-generator@${{ github.sha }}.
+            CI runs the unit tests and the Gauge conformance suite.

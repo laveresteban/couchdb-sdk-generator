@@ -11,7 +11,8 @@ better than a personal access token.
    - Webhook: off
    - Repository permissions: **Contents: Read and write**, **Pull requests: Read and write**, **Metadata: Read**
 2. Generate a private key, then install the app on `couchdb-openapi`,
-   `couchdb-sdk-generator` and `couchdb-python`.
+   `couchdb-sdk-generator`, `couchdb-python` and `couchdb-node`
+   (and `couchdb-android` if it should get automated PRs later).
 3. In each of those repos, add the secrets `SDK_APP_ID` and `SDK_APP_PRIVATE_KEY`.
 4. In the workflows, mint a token before the steps that use `SDK_BOT_TOKEN`:
    ```yaml
@@ -29,8 +30,8 @@ better than a personal access token.
 1. Open <https://github.com/settings/personal-access-tokens/new>, with
    **Resource owner** set to `laveresteban`.
 2. **Repository access → Only select repositories**: pick `couchdb-openapi`,
-   `couchdb-sdk-generator` and `couchdb-python`. With "Public repositories",
-   GitHub only offers read-only permissions.
+   `couchdb-sdk-generator`, `couchdb-python` and `couchdb-node`. With
+   "Public repositories", GitHub only offers read-only permissions.
 3. **Repository permissions**:
    - Contents: **Read and write** (send the dispatch, push the regen branch)
    - Pull requests: **Read and write** (open the regen PR)
@@ -60,4 +61,14 @@ No API token needed:
 2. In GitHub, create the `pypi` environment in `couchdb-python`
    (Settings → Environments), ideally requiring your approval.
 3. Release: `git tag v0.2.0 && git push --tags` in `couchdb-python`.
+
+## 3. npm publishing (couchdb-node)
+
+`release.yml` runs `npm publish --provenance` with `NPM_TOKEN`:
+1. On npmjs.com, create a granular access token with publish rights for
+   `couchdb-node` (or an automation token before the first publish).
+2. In GitHub, create the `npm` environment in `couchdb-node` (Settings →
+   Environments) and add `NPM_TOKEN` as an environment secret.
+3. Release: `git tag v0.6.0 && git push --tags` in `couchdb-node`. The workflow
+   checks that the tag matches `package.json` and the spec version.
 

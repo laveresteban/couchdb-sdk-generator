@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "generate:python": "bash scripts/generate.sh python",
-    "generate:node": "bash scripts/generate.sh typescript ../couchdb-openapi/openapi.yaml ../couchdb-node/couchdb_client && node ../couchdb-node/scripts/sync-version.mjs"
+    "generate:node": "bash scripts/generate.sh typescript"
   },
   "devDependencies": {
     "@openapitools/openapi-generator-cli": "2.15.3"

@@ -41,7 +41,7 @@ additionalProperties:
   dateLibrary: java8
 ```
 
-Add `kotlin` to `sdk-matrix.yaml` pointing at `couchdb-android`. Generate
+Add `kotlin` to `sdk-matrix.json` pointing at `couchdb-android`. Generate
 into a `:remote` Gradle module; the sync library depends on it.
 
 Watch for the two spec patterns the README already lists. Untyped `{}` keys
@@ -49,8 +49,8 @@ will hit kotlinx-serialization too, so map them to `JsonElement`.
 
 ## Spec gaps to close first
 
-Added in spec v0.3.0 (scenarios in `conformance/specs/sync.spec`), except
-continuous `_changes` and `open_revs`, which are still open:
+Added in spec v0.3.0–v0.5.0 (scenarios in `conformance/specs/sync.spec` and
+`changes.spec`). Only `open_revs` is still open; `_bulk_get` covers it:
 
 | Need | Endpoint / param | Why |
 |------|------------------|-----|
