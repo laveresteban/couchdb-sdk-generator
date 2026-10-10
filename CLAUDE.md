@@ -9,15 +9,16 @@ Sibling repos (clone side by side):
 |------|------|--------------|
 | couchdb-openapi | source of truth (`openapi.yaml`) | 0.7.0 |
 | couchdb-sdk-generator | this repo: configs, templates, conformance specs | — |
-| couchdb-python | generated `couchdb_client` + hand-written `couchdb_sdk` | 0.6.0 |
-| couchdb-node | generated `couchdb_client/` + hand-written `src/` | 0.6.0 |
+| couchdb-python | generated `couchdb_client` + hand-written `couchdb_sdk` | 0.7.0 |
+| couchdb-node | generated `couchdb_client/` + hand-written `src/` | 0.7.0 |
 | couchdb-android | hand-written offline sync (no generated code yet) | n/a |
 
 Each repo has its own CLAUDE.md with repo-specific fixes and features.
-The suite has 46 scenarios. 13 were added with spec 0.7.0 (maintenance,
-conditional, listings, ...): the Python and Node SDK PRs need steps for them
-before this repo's `main` gets them, or their conformance jobs fail on skips;
-couchdb-android runs the `documents | changes | sync | databases` tags.
+The suite has 46 scenarios; Python and Node pass all of them and get their
+CI from `sdk-ci.yml` here. couchdb-android runs the
+`documents | changes | sync | databases` tags with its own Gradle CI.
+New scenarios need steps in each SDK before they land on this repo's `main`,
+or the SDKs' conformance jobs fail on skips.
 
 ## Commands
 
@@ -58,15 +59,12 @@ generated files pruned by `generate.sh`; `scripts/check-specs.sh` (parse +
 conventions) and a Docker job in CI that builds every runner image and runs
 a smoke tag through each.
 
-- None known. The CI `docker` job builds all three runner images and runs
-  the `databases` specs through each (green on PR #2).
+- None known.
 
 ## Features to add
 
 - **Conformance scenarios** for gaps that bit us before or that SDKs handle
   differently today:
-  - view query with `start_key`/`end_key` (catches the untyped-`{}` null bug)
-  - attachment content type round trip (spec only allows octet-stream, see openapi CLAUDE.md)
   - cookie session expiry/refresh
   - `_bulk_docs` partial failure (one doc conflicts, others succeed)
   - database names that need encoding (`a/b`, `a+b`)
