@@ -14,8 +14,9 @@ Sibling repos (clone side by side):
 | couchdb-android | hand-written offline sync (no generated code yet) | n/a |
 
 Each repo has its own CLAUDE.md with repo-specific fixes and features.
-The suite has 46 scenarios. Python passes all of them on spec 0.7.0; Node
-still needs the 13 added with 0.7.0 (maintenance, conditional, listings, ...);
+The suite has 46 scenarios. 13 were added with spec 0.7.0 (maintenance,
+conditional, listings, ...): the Python and Node SDK PRs need steps for them
+before this repo's `main` gets them, or their conformance jobs fail on skips;
 couchdb-android runs the `documents | changes | sync | databases` tags.
 
 ## Commands
