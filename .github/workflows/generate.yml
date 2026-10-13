@@ -78,7 +78,7 @@ jobs:
         with: { node-version: 20 }
       - run: cd couchdb-sdk-generator && npm ci
       - run: bash couchdb-sdk-generator/scripts/generate.sh ${{ matrix.lang }}
-      - uses: peter-evans/create-pull-request@v7
+      - uses: peter-evans/create-pull-request@v8
         with:
           path: ${{ steps.target.outputs.repo }}
           token: ${{ secrets.SDK_BOT_TOKEN }}
