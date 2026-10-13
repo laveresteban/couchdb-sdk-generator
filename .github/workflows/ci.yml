@@ -10,15 +10,15 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { path: couchdb-sdk-generator }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: ${{ github.repository_owner }}/couchdb-openapi
           path: couchdb-openapi
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with: { distribution: temurin, java-version: 17 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 20 }
       - run: cd couchdb-sdk-generator && npm ci
       - name: Generate every language into scratch repos
@@ -34,8 +34,8 @@ jobs:
   specs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with: { node-version: 20 }
       - run: bash scripts/check-specs.sh
 
@@ -46,13 +46,13 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { path: couchdb-sdk-generator }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { repository: "${{ github.repository_owner }}/couchdb-python", path: couchdb-python }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { repository: "${{ github.repository_owner }}/couchdb-node", path: couchdb-node }
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { repository: "${{ github.repository_owner }}/couchdb-android", path: couchdb-android }
       - name: Build images
         working-directory: couchdb-sdk-generator
