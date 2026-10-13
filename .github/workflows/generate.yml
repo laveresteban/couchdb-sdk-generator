@@ -13,9 +13,17 @@ on:
     branches: [main]
     paths: ["config/**", "templates/**", "openapitools.json", "scripts/**", "sdk-matrix.json"]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: generate
+  cancel-in-progress: false
+
 jobs:
   preflight:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       ready: ${{ steps.check.outputs.ready }}
       langs: ${{ steps.matrix.outputs.langs }}
@@ -33,6 +41,7 @@ jobs:
     needs: preflight
     if: needs.preflight.outputs.ready == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
